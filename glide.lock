@@ -1,8 +1,8 @@
-hash: c52182997592ef7be139de6a2388fa3a504574dcc5976b053f6c49396b3aaff5
-updated: 2017-04-12T13:14:38.959156511-05:00
+hash: e3b08d9179a94ce1a59cd5a92b6b5a70f631bb0dea4c47a78055e2c3e6c7b300
+updated: 2017-04-13T14:53:21.174111218-05:00
 imports:
 - name: github.com/armon/go-metrics
-  version: 97c69685293dce4c0a2d0b19535179bbc976e4d2
+  version: 93f237eba9b0602f3e73710416558854a81d9337
 - name: github.com/boltdb/bolt
   version: 4b1ebc1869ad66568b313d0dc410e2be72670dda
 - name: github.com/BurntSushi/toml
@@ -16,7 +16,7 @@ imports:
   subpackages:
   - spew
 - name: github.com/fsnotify/fsnotify
-  version: 7d7316ed6e1ed2de075aab8dfc76de5d158d66e1
+  version: 4da3e2cfbabc9f751898f250b49f2439785783a1
 - name: github.com/gogo/protobuf
   version: a9cd0c35b97daf74d0ebf3514c5254814b2703b4
   subpackages:
@@ -26,9 +26,13 @@ imports:
   subpackages:
   - lru
 - name: github.com/golang/protobuf
-  version: 8ee79997227bf9b34611aee7946ae64735e6fd93
+  version: 2bba0603135d7d7f5cb73b2125beeda19c09f4ef
   subpackages:
   - proto
+- name: github.com/gorilla/context
+  version: 08b5f424b9271eedf6f9f0ce86cb9396ed337a42
+- name: github.com/gorilla/mux
+  version: 392c28fe23e1c45ddba891b0320b3b5df220beea
 - name: github.com/hashicorp/errwrap
   version: 7554cd9344cec97297fa6649b055a8c98c2a1e55
 - name: github.com/hashicorp/go-msgpack
@@ -37,6 +41,8 @@ imports:
   - codec
 - name: github.com/hashicorp/go-multierror
   version: ed905158d87462226a13fe39ddf685ea65f1c11f
+- name: github.com/hashicorp/go-sockaddr
+  version: acd314c5781ea706c710d9ea70069fd2e110d61d
 - name: github.com/hashicorp/hcl
   version: 630949a3c5fa3c613328e1b8256052cbc2327c9b
   subpackages:
@@ -49,41 +55,43 @@ imports:
   - json/scanner
   - json/token
 - name: github.com/hashicorp/memberlist
-  version: 9800c50ab79c002353852a9b1095e9591b161513
+  version: ce8abaa0c60c2d6bee7219f5ddf500e0a1457b28
 - name: github.com/inconshreveable/mousetrap
   version: 76626ae9c91c4f2a10f34cad8ce83ea42c93bb75
 - name: github.com/magiconair/properties
-  version: b3b15ef068fd0b17ddf408a23669f20811d194d2
+  version: 51463bfca2576e06c62a8504b5c0f06d61312647
 - name: github.com/miekg/dns
-  version: ca336a1f95a6b89be9c250df26c7a41742eb4a6f
+  version: 6ebcb714d36901126ee2807031543b38c56de963
 - name: github.com/mitchellh/mapstructure
-  version: db1efb556f84b25a0a13a04aad883943538ad2e0
+  version: 53818660ed4955e899c0bcafa97299a388bd7c8e
 - name: github.com/pelletier/go-buffruneio
   version: c37440a7cf42ac63b919c752ca73a85067e05992
 - name: github.com/pelletier/go-toml
-  version: 13d49d4606eb801b8f01ae542b4afc4c6ee3d84a
+  version: fe206efb84b2bc8e8cfafe6b4c1826622be969e3
 - name: github.com/satori/go.uuid
   version: 879c5887cd475cd7864858769793b2ceb0d44feb
+- name: github.com/sean-/seed
+  version: e2103e2c35297fb7e17febb81e49b312087a2372
 - name: github.com/spf13/afero
   version: 9be650865eab0c12963d8753212f4f9c66cdcf12
   subpackages:
   - mem
 - name: github.com/spf13/cast
-  version: 4f1683a2242a92e62d6ff705a30e435cbf2b50a3
+  version: acbeb36b902d72a7a4c18e8f3241075e7ab763e4
 - name: github.com/spf13/cobra
-  version: fcd0c5a1df88f5d6784cb4feead962c3f3d0b66c
+  version: 5deb57bbca49eb370538fc295ba4b2988f9f5e09
 - name: github.com/spf13/jwalterweatherman
   version: fa7ca7e836cf3a8bb4ebf799f472c12d7e903d66
 - name: github.com/spf13/pflag
-  version: 9ff6c6923cfffbcd502984b8e0c80539a94968b7
+  version: e453343e6260b4a3a89f1f0e10a2fbb07f8d9750
 - name: github.com/spf13/viper
-  version: 7538d73b4eb9511d85a9f1dfef202eeb8ac260f4
+  version: 5d46e70da8c0b6f812e0b170b7a985753b5c63cb
 - name: golang.org/x/net
-  version: 60c41d1de8da134c05b7b40154a9a82bf5b7edb9
+  version: 5602c733f70afc6dcec6766be0d5034d4c4f14de
   subpackages:
   - context
 - name: golang.org/x/sync
-  version: 450f422ab23cf9881c94e2db30cac0eb1b7cf80c
+  version: 5a06fca2c336a4b2b2fcb45702e8c47621b2aa2c
   subpackages:
   - errgroup
 - name: golang.org/x/sys
@@ -91,10 +99,10 @@ imports:
   subpackages:
   - unix
 - name: golang.org/x/text
-  version: 5a42fa2464759cbb7ee0af9de00b54d69f09a29c
+  version: f4b4367115ec2de254587813edaa901bc1c723a8
   subpackages:
   - transform
   - unicode/norm
 - name: gopkg.in/yaml.v2
-  version: a3f3340b5840cee44f372bddb5880fcbc419b46a
+  version: cd8b52f8269e0feb286dfeef29f8fe4d5b397e0b
 testImports: []
