@@ -100,7 +100,13 @@ func (h *Handler) methodNotAllowedHandler(w http.ResponseWriter, r *http.Request
 
 // ServeHTTP handles an HTTP request.
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	t := time.Now()
 	h.Router.ServeHTTP(w, r)
+	dif := time.Since(t).Seconds()
+
+	if dif > 90 {
+		h.logger().Printf("%s %s %.03fs", r.Method, r.URL.String(), dif)
+	}
 }
 
 // handleGetSchema handles GET /schema requests.
