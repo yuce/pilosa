@@ -23,7 +23,6 @@ import (
 
 	"github.com/pilosa/pilosa/cmd"
 	_ "github.com/pilosa/pilosa/plugins"
-
 )
 
 func main() {
