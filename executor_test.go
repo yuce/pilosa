@@ -528,8 +528,8 @@ func TestExecutor_Execute_ExternalCall(t *testing.T) {
 	e := NewExecutor(hldr.Holder, NewCluster(1))
 	p := MockPluginConstructorWrapper{
 		mock: &MockPlugin{
-			MapFn: func(ctx context.Context, db string, c *pql.Call, slice uint64) (interface{}, error) {
-				child0, err := e.ExecuteCallSlice(ctx, db, c.Children[0], slice, nil)
+			MapFn: func(ctx context.Context, index string, call *pql.Call, slice uint64) (interface{}, error) {
+				child0, err := e.ExecuteCallSlice(ctx, index, call.Children[0], slice, nil)
 				if err != nil {
 					return nil, err
 				}
