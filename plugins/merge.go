@@ -8,7 +8,10 @@ import (
 )
 
 func init() {
-	pilosa.RegisterPlugin("MergeTop", NewMergeTopPlugin)
+	callInfo := &pilosa.PQLCallInfo{
+		Name: "MergeTop",
+	}
+	pilosa.RegisterPlugin(callInfo, NewMergeTopPlugin)
 }
 
 // MergeTopPlugin represents a plugin that give a set of all the bits in the top-n
