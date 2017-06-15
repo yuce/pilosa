@@ -36,6 +36,7 @@ import (
 	"github.com/pilosa/pilosa"
 	"github.com/pilosa/pilosa/httpbroadcast"
 	"github.com/pilosa/pilosa/server"
+	"github.com/pilosa/pilosa/test"
 )
 
 // Ensure program can process queries and maintain consistency.
@@ -449,7 +450,7 @@ func TestMain_SendReceiveMessage(t *testing.T) {
 		}
 	}
 	if !reflect.DeepEqual(received0, expected) {
-		t.Fatalf("unexpected schema on node0: %d", received0)
+		t.Fatalf("unexpected schema on node0: %s", received0)
 	}
 
 	// Make sure node1 knows about the index and frame created.
@@ -465,7 +466,7 @@ func TestMain_SendReceiveMessage(t *testing.T) {
 		}
 	}
 	if !reflect.DeepEqual(received1, expected) {
-		t.Fatalf("unexpected schema on node1: %d", received1)
+		t.Fatalf("unexpected schema on node1: %s", received1)
 	}
 
 	// Write data on first node.
@@ -542,6 +543,7 @@ func NewMain() *Main {
 	}
 
 	m := &Main{Command: server.NewCommand(os.Stdin, os.Stdout, os.Stderr)}
+	m.Server.Network = *test.Network
 	m.Config.DataDir = path
 	m.Config.Host = "localhost:0"
 	m.Command.Stdin = &m.Stdin
@@ -580,7 +582,10 @@ func (m *Main) Reopen() error {
 	// Create new main with the same config.
 	config := m.Config
 	m.Command = server.NewCommand(os.Stdin, os.Stdout, os.Stderr)
+	m.Server.Network = *test.Network
 	m.Config = config
+
+	println("dbg/network", *test.Network)
 
 	// Run new program.
 	if err := m.Run(); err != nil {

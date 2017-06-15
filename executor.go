@@ -58,7 +58,6 @@ type Executor struct {
 func NewExecutor() *Executor {
 	return &Executor{
 		HTTPClient: http.DefaultClient,
-		//	PluginRegistry: NewPluginRegistry(),
 	}
 }
 
@@ -159,12 +158,13 @@ func (e *Executor) executeCall(ctx context.Context, index string, c *pql.Call, s
 	if err := e.validateCallArgs(c); err != nil {
 		return nil, err
 	}
-
+	indexTag := fmt.Sprintf("index:%s", index)
 	// Special handling for mutation and top-n calls.
 	switch c.Name {
 	case "ClearBit":
 		return e.executeClearBit(ctx, index, c, opt)
 	case "Count":
+		e.Holder.Stats.CountWithCustomTags(c.Name, 1, 1.0, []string{indexTag})
 		return e.executeCount(ctx, index, c, slices, opt)
 	case "SetBit":
 		return e.executeSetBit(ctx, index, c, opt)
@@ -173,11 +173,21 @@ func (e *Executor) executeCall(ctx context.Context, index string, c *pql.Call, s
 	case "SetColumnAttrs":
 		return nil, e.executeSetColumnAttrs(ctx, index, c, opt)
 	case "TopN":
+		e.Holder.Stats.CountWithCustomTags(c.Name, 1, 1.0, []string{indexTag})
 		return e.executeTopN(ctx, index, c, slices, opt)
 	case "Bitmap", "Difference", "Intersect", "Range", "Union":
-		return e.executeBitmapCall(ctx, index, c, slices, opt)
-	default:
-		return e.executeExternalCall(ctx, index, c, slices, opt)
+     e.Holder.Stats.CountWithCustomTags(c.Name, 1, 1.0, []string{indexTag})
+     return e.executeBitmapCall(ctx, index, c, slices, opt)
+  default:
+		value, err := e.executeExternalCall(ctx, index, c, slices, opt)
+		if err != nil {
+			return nil, err
+		}
+		err = e.validateReturnValue(value)
+		if err != nil {
+			return nil, err
+		}
+		return value, nil
 	}
 }
 
@@ -198,6 +208,14 @@ func (e *Executor) validateCallArgs(c *pql.Call) error {
 		}
 	}
 	return nil
+}
+
+func (e *Executor) validateReturnValue(value interface{}) error {
+	switch value.(type) {
+	case bool, uint64, []Pair, Bitmap:
+		return nil
+	}
+	return errors.New("Unknown return value type")
 }
 
 // executeBitmapCall executes a call that returns a bitmap.
@@ -286,7 +304,7 @@ func (e *Executor) executeBitmapCallSlice(ctx context.Context, index string, c *
 }
 
 // executeExternalCall executes an external plugin call.
-func (e *Executor) executeExternalCall(ctx context.Context, db string, c *pql.Call, slices []uint64, opt *ExecOptions) (interface{}, error) {
+func (e *Executor) executeExternalCall(ctx context.Context, idx string, c *pql.Call, slices []uint64, opt *ExecOptions) (interface{}, error) {
 	// Create plugin from registry for the reduction.
 	p, err := e.newPlugin(c)
 	if err != nil {
@@ -295,7 +313,7 @@ func (e *Executor) executeExternalCall(ctx context.Context, db string, c *pql.Ca
 
 	// Execute calls in bulk on each remote node and merge.
 	mapFn := func(slice uint64) (interface{}, error) {
-		return e.executeExternalCallSlice(ctx, db, c, slice, p)
+		return e.executeExternalCallSlice(ctx, idx, c, slice, p)
 	}
 
 	// Merge returned results at coordinating node.
@@ -303,7 +321,7 @@ func (e *Executor) executeExternalCall(ctx context.Context, db string, c *pql.Ca
 		return p.Reduce(ctx, prev, v)
 	}
 
-	other, err := e.mapReduce(ctx, db, slices, c, opt, mapFn, reduceFn)
+	other, err := e.mapReduce(ctx, idx, slices, c, opt, mapFn, reduceFn)
 	if err != nil {
 		return nil, err
 	}
@@ -312,7 +330,7 @@ func (e *Executor) executeExternalCall(ctx context.Context, db string, c *pql.Ca
 }
 
 // executeExternalCallSlice executes the map phase of an external plugin call against a single slice.
-func (e *Executor) executeExternalCallSlice(ctx context.Context, db string, c *pql.Call, slice uint64, p Plugin) (interface{}, error) {
+func (e *Executor) executeExternalCallSlice(ctx context.Context, idx string, c *pql.Call, slice uint64, p Plugin) (interface{}, error) {
 	var err error
 	if p == nil {
 		p, err = e.newPlugin(c)
@@ -337,20 +355,19 @@ func (e *Executor) executeExternalCallSlice(ctx context.Context, db string, c *p
 		Args:     args,
 	}
 
-	return p.Map(ctx, db, call, slice)
+	return p.Map(ctx, idx, call, slice)
 }
 
-func (e *Executor) ExecuteCallSlice(ctx context.Context, db string, c *pql.Call, slice uint64, p Plugin) (interface{}, error) {
+func (e *Executor) ExecuteCallSlice(ctx context.Context, idx string, c *pql.Call, slice uint64, p Plugin) (interface{}, error) {
 	switch c.Name {
 	case "Bitmap", "Difference", "Intersect", "Range", "Union":
-		return e.executeBitmapCallSlice(ctx, db, c, slice)
+		return e.executeBitmapCallSlice(ctx, idx, c, slice)
 	case "Count":
-		//	return e.executeCountSlice(ctx, db, c, slice)
 		return nil, errors.New("nested Count in Plugin not currently supported")
 	case "TopN":
 		return nil, errors.New("nested TopN() not currently supported")
 	default:
-		return e.executeExternalCallSlice(ctx, db, c, slice, p)
+		return e.executeExternalCallSlice(ctx, idx, c, slice, p)
 	}
 }
 
@@ -360,15 +377,6 @@ func (e *Executor) newPlugin(c *pql.Call) (Plugin, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	// Set index on plugin if method exists.
-	/* TODO What is this?
-	if p, ok := p.(interface {
-		SetIndex(*Index)
-	}); ok {
-		p.SetIndex(e.Index)
-	}
-	*/
 
 	return p, nil
 }
@@ -679,6 +687,7 @@ func (e *Executor) executeRangeSlice(ctx context.Context, index string, c *pql.C
 		}
 		bm = bm.Union(f.Row(id))
 	}
+	f.Stats.Count("range", 1, 1.0)
 	return bm, nil
 }
 
@@ -964,6 +973,7 @@ func (e *Executor) executeSetRowAttrs(ctx context.Context, index string, c *pql.
 	if err := frame.RowAttrStore().SetAttrs(rowID, attrs); err != nil {
 		return err
 	}
+	frame.Stats.Count("SetBitmapAttrs", 1, 1.0)
 
 	// Do not forward call if this is already being forwarded.
 	if opt.Remote {
@@ -1049,6 +1059,7 @@ func (e *Executor) executeBulkSetRowAttrs(ctx context.Context, index string, cal
 		if err := frame.RowAttrStore().SetBulkAttrs(frameMap); err != nil {
 			return nil, err
 		}
+		frame.Stats.Count("SetBitmapAttrs", 1, 1.0)
 	}
 
 	// Do not forward call if this is already being forwarded.
@@ -1108,7 +1119,7 @@ func (e *Executor) executeSetColumnAttrs(ctx context.Context, index string, c *p
 	if err := idx.ColumnAttrStore().SetAttrs(id, attrs); err != nil {
 		return err
 	}
-
+	idx.Stats.Count("SetProfileAttrs", 1, 1.0)
 	// Do not forward call if this is already being forwarded.
 	if opt.Remote {
 		return nil
@@ -1160,6 +1171,7 @@ func (e *Executor) exec(ctx context.Context, node *Node, index string, q *pql.Qu
 	// Require protobuf encoding.
 	req.Header.Set("Accept", "application/x-protobuf")
 	req.Header.Set("Content-Type", "application/x-protobuf")
+	req.Header.Set("User-Agent", "pilosa/"+Version)
 
 	// Send request to remote node.
 	resp, err := e.HTTPClient.Do(req)

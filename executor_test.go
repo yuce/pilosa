@@ -543,8 +543,6 @@ func TestExecutor_Execute_ExternalCall(t *testing.T) {
 		},
 	}
 
-	//	type NewPluginConstructor func(*Holder) Plugin
-
 	pilosa.RegisterPlugin("test1", pilosa.NewPluginConstructor(p.NewMockPluginConstruct))
 
 	// Execute function with plugin call.
@@ -589,6 +587,7 @@ func TestExecutor_Execute_Remote_Bitmap(t *testing.T) {
 	// The local node owns slice 1.
 	hldr := MustOpenHolder()
 	defer hldr.Close()
+	s.Handler.Holder = hldr.Holder
 	hldr.MustCreateFragmentIfNotExists("i", "f", pilosa.ViewStandard, 1).MustSetBits(10, (1*SliceWidth)+1)
 
 	e := NewExecutor(hldr.Holder, c)
@@ -616,6 +615,7 @@ func TestExecutor_Execute_Remote_Count(t *testing.T) {
 	// Create local executor data. The local node owns slice 1.
 	hldr := MustOpenHolder()
 	defer hldr.Close()
+	s.Handler.Holder = hldr.Holder
 	hldr.MustCreateFragmentIfNotExists("i", "f", pilosa.ViewStandard, 2).MustSetBits(10, (2*SliceWidth)+1)
 	hldr.MustCreateFragmentIfNotExists("i", "f", pilosa.ViewStandard, 2).MustSetBits(10, (2*SliceWidth)+2)
 
@@ -652,6 +652,7 @@ func TestExecutor_Execute_Remote_SetBit(t *testing.T) {
 	// Create local executor data.
 	hldr := MustOpenHolder()
 	defer hldr.Close()
+	s.Handler.Holder = hldr.Holder
 
 	// Create frame.
 	if _, err := hldr.MustCreateIndexIfNotExists("i", pilosa.IndexOptions{}).CreateFrame("f", pilosa.FrameOptions{}); err != nil {
@@ -697,6 +698,7 @@ func TestExecutor_Execute_Remote_SetBit_With_Timestamp(t *testing.T) {
 	// Create local executor data.
 	hldr := MustOpenHolder()
 	defer hldr.Close()
+	s.Handler.Holder = hldr.Holder
 
 	// Create frame.
 	if f, err := hldr.MustCreateIndexIfNotExists("i", pilosa.IndexOptions{}).CreateFrame("f", pilosa.FrameOptions{}); err != nil {
@@ -764,6 +766,7 @@ func TestExecutor_Execute_Remote_TopN(t *testing.T) {
 	// Create local executor data on slice 2 & 4.
 	hldr := MustOpenHolder()
 	defer hldr.Close()
+	s.Handler.Holder = hldr.Holder
 	hldr.MustCreateRankedFragmentIfNotExists("i", "f", pilosa.ViewStandard, 2).MustSetBits(30, (2*SliceWidth)+1)
 	hldr.MustCreateRankedFragmentIfNotExists("i", "f", pilosa.ViewStandard, 4).MustSetBits(30, (4*SliceWidth)+2)
 
@@ -776,6 +779,82 @@ func TestExecutor_Execute_Remote_TopN(t *testing.T) {
 		{ID: 10, Count: 2},
 	}}) {
 		t.Fatalf("unexpected results: %s", spew.Sdump(res))
+	}
+}
+
+func TestExecutor_ValidateResultType(t *testing.T) {
+	makePluginWrapper := func(value interface{}) MockPluginConstructorWrapper {
+		return MockPluginConstructorWrapper{
+			mock: &MockPlugin{
+				MapFn: func(ctx context.Context, index string, call *pql.Call, slice uint64) (interface{}, error) {
+					return value, nil
+				},
+				ReduceFn: func(ctx context.Context, prev, v interface{}) interface{} {
+					return v
+				},
+			},
+		}
+	}
+	hldr := MustOpenHolder()
+	defer hldr.Close()
+
+	hldr.MustCreateIndexIfNotExists("i", pilosa.IndexOptions{})
+
+	var res []interface{}
+	var err error
+
+	e := NewExecutor(hldr.Holder, NewCluster(1))
+
+	// Test uint64 return value type is accepted
+	pUint64 := makePluginWrapper(uint64(10))
+	pilosa.RegisterPlugin("testUint", pilosa.NewPluginConstructor(pUint64.NewMockPluginConstruct))
+	res, err = e.Execute(context.Background(), "i", MustParse("testUint()"), nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res[0] != uint64(10) {
+		t.Fatalf("Unexpected: %d %s", res[0], reflect.TypeOf(res[0]))
+	}
+
+	// Test bool return value type is accepted
+	pBool := makePluginWrapper(true)
+	pilosa.RegisterPlugin("testBool", pilosa.NewPluginConstructor(pBool.NewMockPluginConstruct))
+	res, err = e.Execute(context.Background(), "i", MustParse("testBool()"), nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res[0] != true {
+		t.Fatalf("Unexpected: %d %s", res[0], reflect.TypeOf(res[0]))
+	}
+
+	// Test []Pair return value type is accepted
+	pPairs := makePluginWrapper([]pilosa.Pair{})
+	pilosa.RegisterPlugin("testPairs", pilosa.NewPluginConstructor(pPairs.NewMockPluginConstruct))
+	res, err = e.Execute(context.Background(), "i", MustParse("testPairs()"), nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reflect.TypeOf(res[0]) != reflect.TypeOf([]pilosa.Pair{}) {
+		t.Fatalf("Unexpected: %v %s", res[0], reflect.TypeOf(res[0]))
+	}
+
+	// Test Bitmap return value type is accepted
+	pBitmap := makePluginWrapper(pilosa.Bitmap{})
+	pilosa.RegisterPlugin("testBitmap", pilosa.NewPluginConstructor(pBitmap.NewMockPluginConstruct))
+	res, err = e.Execute(context.Background(), "i", MustParse("testBitmap()"), nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reflect.TypeOf(res[0]) != reflect.TypeOf(pilosa.Bitmap{}) {
+		t.Fatalf("Unexpected: %v %s", res[0], reflect.TypeOf(res[0]))
+	}
+
+	// Test return value type validation failure
+	pFail := makePluginWrapper(pilosa.TimeQuantum("YMDH"))
+	pilosa.RegisterPlugin("testFail", pilosa.NewPluginConstructor(pFail.NewMockPluginConstruct))
+	res, err = e.Execute(context.Background(), "i", MustParse("testFail()"), nil, nil)
+	if err == nil {
+		t.Fatalf("Validation should fail for not allowed return value types")
 	}
 }
 

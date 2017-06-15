@@ -1,4 +1,4 @@
-.PHONY: glide vendor-update docker pilosa crossbuild install generate statik release
+.PHONY: glide vendor-update docker pilosa crossbuild install generate statik release test
 
 GLIDE := $(shell command -v glide 2>/dev/null)
 STATIK := $(shell command -v statik 2>/dev/null)
@@ -7,7 +7,7 @@ VERSION := $(shell git describe --tags 2> /dev/null || echo unknown)
 IDENTIFIER := $(VERSION)-$(GOOS)-$(GOARCH)
 CLONE_URL=github.com/pilosa/pilosa
 BUILD_TIME=`date -u +%FT%T%z`
-LDFLAGS="-X github.com/pilosa/pilosa/cmd.Version=$(VERSION) -X github.com/pilosa/pilosa/cmd.BuildTime=$(BUILD_TIME)"
+LDFLAGS=-"-X github.com/pilosa/pilosa.Version=$(VERSION) -X github.com/pilosa/pilosa.BuildTime=$(BUILD_TIME)"
 
 default: test pilosa
 
@@ -31,7 +31,7 @@ glide.lock: glide glide.yaml
 vendor-update: glide.lock
 
 test: vendor
-	go test $(shell cd $(GOPATH)/src/$(CLONE_URL); go list ./... | grep -v vendor)
+	go test $(shell cd $(GOPATH)/src/$(CLONE_URL); go list ./... | grep -v vendor) $(TESTFLAGS)
 
 pilosa: vendor
 	go build -ldflags $(LDFLAGS) $(FLAGS) $(CLONE_URL)/cmd/pilosa
