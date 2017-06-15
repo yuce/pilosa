@@ -2,6 +2,7 @@ package plugins
 
 import (
 	"context"
+	"errors"
 
 	"github.com/pilosa/pilosa"
 	"github.com/pilosa/pilosa/pql"
@@ -14,7 +15,7 @@ func init() {
 	pilosa.RegisterPlugin(callInfo, NewMergeTopPlugin)
 }
 
-// MergeTopPlugin represents a plugin that give a set of all the bits in the top-n
+// MergeTopPlugin represents a plugin that produces a union of the top-n bitmaps.
 type MergeTopPlugin struct {
 	holder *pilosa.Holder
 }
@@ -38,7 +39,7 @@ func (p *MergeTopPlugin) Map(ctx context.Context, index string, call *pql.Call, 
 	if fr, found := args["frame"]; found {
 		frame = fr.(string)
 	} else {
-		//error if no frame label is given
+		return nil, errors.New("frame required")
 	}
 
 	view := p.holder.View(index, frame, pilosa.ViewStandard)
