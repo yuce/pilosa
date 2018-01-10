@@ -41,7 +41,7 @@ type Node struct {
 	Scheme string `json:"scheme"`
 	Host   string `json:"host"`
 
-	status *internal.NodeStatus `json:"status"`
+	status *internal.NodeStatus
 }
 
 // SetStatus sets the NodeStatus.

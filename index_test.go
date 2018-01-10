@@ -297,6 +297,9 @@ func TestIndex_InvalidName(t *testing.T) {
 		panic(err)
 	}
 	index, err := pilosa.NewIndex(path, "ABC")
+	if err != nil {
+		panic(err)
+	}
 	if index != nil {
 		t.Fatalf("unexpected index name %v", index)
 	}

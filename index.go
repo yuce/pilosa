@@ -759,6 +759,9 @@ func (i *Index) openInputDefinitions() error {
 	defer inputDef.Close()
 
 	inputFiles, err := inputDef.Readdir(0)
+	if err != nil {
+		return err
+	}
 	for _, file := range inputFiles {
 		input, err := i.newInputDefinition(file.Name())
 		if err != nil {
