@@ -14,8 +14,7 @@
 
 package roaring
 
-import "testing"
-
+/*
 func TestBSFQ(t *testing.T) {
 	result := BSFQ(2)
 	if result != 1 {
@@ -40,8 +39,10 @@ func TestBSFQ_CompareGo(t *testing.T) {
 			fmt.Println(bsfq(0))
 			t.Fatalf("BSF INCORRECT")
 		}
-	*/
-}
+*/
+// }
+
+/*
 func BenchmarkBSF(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		BSFQ(uint64(i))
@@ -140,3 +141,4 @@ func BenchmarkPopcntSlice(b *testing.B) {
 		popcntSlice(d)
 	}
 }
+*/
