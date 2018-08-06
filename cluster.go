@@ -167,7 +167,7 @@ type nodeAction struct {
 type cluster struct { // nolint: maligned
 	id    string
 	Node  *Node
-	Nodes []*Node // TODO phase this out?
+	Nodes []*Node
 
 	// Hashing algorithm used to assign partitions to nodes.
 	Hasher Hasher
@@ -920,7 +920,6 @@ func (c *cluster) allNodesReady() bool {
 }
 
 func (c *cluster) handleNodeAction(nodeAction nodeAction) error {
-
 	c.mu.Lock()
 	j, err := c.unprotectedGenerateResizeJob(nodeAction)
 	c.mu.Unlock()
@@ -944,7 +943,7 @@ func (c *cluster) handleNodeAction(nodeAction nodeAction) error {
 	c.logger.Printf("wait for jobResult")
 	jobResult := <-j.result
 
-	// Make sure j.Run() didn't return an error.
+	// Make sure j.run() didn't return an error.
 	if eg.Wait() != nil {
 		return errors.Wrap(err, "running job")
 	}
@@ -1750,11 +1749,33 @@ func (c *cluster) mergeClusterStatus(cs *ClusterStatus) error {
 		}
 	}
 
+	// If the cluster membership has changed, reset the primary for
+	// translate store replication.
+	c.holder.setPrimaryTranslateStore(c.unprotectedPreviousNode())
+
 	c.unprotectedSetState(cs.State)
 
 	c.markAsJoined()
 
 	return nil
+}
+
+// unprotectedPreviousNode returns the node listed before the current node in c.Nodes.
+// If there is only one node in the cluster, returns nil.
+// If the current node is the first node in the list, returns the last node.
+func (c *cluster) unprotectedPreviousNode() *Node {
+	if len(c.Nodes) <= 1 {
+		return nil
+	}
+
+	pos := c.nodePositionByID(c.Node.ID)
+	if pos == -1 {
+		return nil
+	} else if pos == 0 {
+		return c.Nodes[len(c.Nodes)-1]
+	} else {
+		return c.Nodes[pos-1]
+	}
 }
 
 // setStatic is unprotected, but only called before the cluster has been started
