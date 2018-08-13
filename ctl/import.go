@@ -424,7 +424,7 @@ func (cmd *ImportCommand) bufferValues(ctx context.Context, path string) error {
 	return cmd.importValues(ctx, a)
 }
 
-// bufferValues buffers slices of FieldValues to be imported as a batch.
+// bufferValuesK buffers slices of FieldValues to be imported as a batch.
 func (cmd *ImportCommand) bufferValuesK(ctx context.Context, path string) error {
 	a := make([]pilosa.FieldValue, 0, cmd.BufferSize)
 
